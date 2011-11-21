@@ -9,9 +9,6 @@
 #import "HSBackspaceFriendlyTextField.h"
 #import <objc/runtime.h>
 
-#if __has_feature(objc_arc)
-  #error "This class must be compiled without ARC because objc_allocateClassPair() doesn't like ARC"
-#endif
 
 static NSString * const SubclassName = @"HSBackspaceNotifyingFieldEditor";
 
@@ -19,6 +16,15 @@ static void *BackwardDeleteTargetKey = &BackwardDeleteTargetKey;
 
 
 @implementation HSBackspaceFriendlyTextField
+
++ (void)load {
+	Class UIFieldEditor = NSClassFromString(@"UIFieldEditor");
+	Method deleteBackward = class_getInstanceMethod(UIFieldEditor, @selector(deleteBackward));
+	Method hs_deleteBackward = class_getInstanceMethod(UIFieldEditor, @selector(hs_deleteBackward));
+	if (deleteBackward && hs_deleteBackward && strcmp(method_getTypeEncoding(deleteBackward), method_getTypeEncoding(hs_deleteBackward)) == 0) {
+		method_exchangeImplementations(deleteBackward, hs_deleteBackward);
+	}
+}
 
 - (void)my_willDeleteBackward {
 	
@@ -35,41 +41,15 @@ static void *BackwardDeleteTargetKey = &BackwardDeleteTargetKey;
 	}
 }
 
-- (Class)registerMyFieldEditor {
-	Class uiFieldEditorClass = objc_lookUpClass("UIFieldEditor");
-	Class myFieldEditorClass = NULL;
-	
-	if (uiFieldEditorClass) {
-		// Register the new class
-		myFieldEditorClass = objc_allocateClassPair(uiFieldEditorClass, [SubclassName UTF8String], 0);
-		objc_registerClassPair(myFieldEditorClass);
-		
-		// Add the new deleteBackward implementation
-		IMP fieldEditor_deleteBackwardIMP = [self methodForSelector:@selector(fieldEditor_deleteBackward)];
-		Method fieldEditor_deleteBackwardMethod = class_getInstanceMethod(myFieldEditorClass, 
-																		  @selector(fieldEditor_deleteBackward));
-		const char *types = method_getTypeEncoding(fieldEditor_deleteBackwardMethod);
-		
-		class_addMethod(myFieldEditorClass, @selector(deleteBackward), fieldEditor_deleteBackwardIMP, types);
-	}
-	return myFieldEditorClass;
-}
-
 - (BOOL)becomeFirstResponder {
 	BOOL shouldBecome = [super becomeFirstResponder];
 	if (shouldBecome == NO) {
 		return NO;
 	}
 	
-	Class myFieldEditorClass = objc_lookUpClass([SubclassName UTF8String]);
-	if (myFieldEditorClass == nil) {
-		myFieldEditorClass = [self registerMyFieldEditor];
-	}
-	
 	id fieldEditor = [self valueForKey:@"fieldEditor"];
 	
-	if (fieldEditor && myFieldEditorClass) {
-		object_setClass(fieldEditor, myFieldEditorClass);
+	if (fieldEditor) {
 		objc_setAssociatedObject(fieldEditor, BackwardDeleteTargetKey, self, OBJC_ASSOCIATION_ASSIGN);
 	}
 	
@@ -86,23 +66,25 @@ static void *BackwardDeleteTargetKey = &BackwardDeleteTargetKey;
 					  
 	if (fieldEditor) {
 		objc_setAssociatedObject(fieldEditor, BackwardDeleteTargetKey, nil, OBJC_ASSOCIATION_ASSIGN);
-		Class uiFieldEditorClass = objc_lookUpClass("UIFieldEditor");
-		if (uiFieldEditorClass) {
-			object_setClass(fieldEditor, uiFieldEditorClass);
-		}
 	}
 	return YES;
 }
 
-- (void)fieldEditor_deleteBackward {
+@end
+
+WEAK_IMPORT_ATTRIBUTE
+@interface UIFieldEditor : UIView
+@end
+
+@implementation UIFieldEditor (HSBackspaceFriendlyTextField)
+
+- (void)hs_deleteBackward {
 	
 	HSBackspaceFriendlyTextField *textField = objc_getAssociatedObject(self, BackwardDeleteTargetKey);
 	[textField my_willDeleteBackward];
 	
-	Class superclass = class_getSuperclass([self class]);
-	SEL deleteBackwardSEL = @selector(deleteBackward);
-	IMP superIMP = [superclass instanceMethodForSelector:deleteBackwardSEL];
-	superIMP(self, deleteBackwardSEL);
+	// Swizzled method, this actually calls the original IMP
+	[self hs_deleteBackward];
 }
 
 @end

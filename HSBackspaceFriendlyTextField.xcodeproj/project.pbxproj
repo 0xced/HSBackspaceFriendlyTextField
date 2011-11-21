@@ -15,7 +15,7 @@
 		B782C952145D0BB2003EC53D /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = B782C951145D0BB2003EC53D /* AppDelegate.m */; };
 		B782C955145D0BB2003EC53D /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = B782C954145D0BB2003EC53D /* ViewController.m */; };
 		B782C958145D0BB2003EC53D /* ViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = B782C956145D0BB2003EC53D /* ViewController.xib */; };
-		B782C960145D0C28003EC53D /* HSBackspaceFriendlyTextField.m in Sources */ = {isa = PBXBuildFile; fileRef = B782C95F145D0C28003EC53D /* HSBackspaceFriendlyTextField.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
+		B782C960145D0C28003EC53D /* HSBackspaceFriendlyTextField.m in Sources */ = {isa = PBXBuildFile; fileRef = B782C95F145D0C28003EC53D /* HSBackspaceFriendlyTextField.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
