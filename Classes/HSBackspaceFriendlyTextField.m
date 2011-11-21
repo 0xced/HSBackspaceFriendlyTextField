@@ -14,15 +14,26 @@ static NSString * const SubclassName = @"HSBackspaceNotifyingFieldEditor";
 
 static void *BackwardDeleteTargetKey = &BackwardDeleteTargetKey;
 
+static void (*UIFieldEditor_deleteBackward)(id, SEL) = NULL;
+
+static void deleteBackward(id self, SEL _cmd) {
+	
+	HSBackspaceFriendlyTextField *textField = objc_getAssociatedObject(self, BackwardDeleteTargetKey);
+	[textField my_willDeleteBackward];
+	
+	UIFieldEditor_deleteBackward(self, _cmd);
+}
+
 
 @implementation HSBackspaceFriendlyTextField
 
 + (void)load {
 	Class UIFieldEditor = NSClassFromString(@"UIFieldEditor");
-	Method deleteBackward = class_getInstanceMethod(UIFieldEditor, @selector(deleteBackward));
-	Method hs_deleteBackward = class_getInstanceMethod(UIFieldEditor, @selector(hs_deleteBackward));
-	if (deleteBackward && hs_deleteBackward && strcmp(method_getTypeEncoding(deleteBackward), method_getTypeEncoding(hs_deleteBackward)) == 0) {
-		method_exchangeImplementations(deleteBackward, hs_deleteBackward);
+	Method deleteBackwardMethod = class_getInstanceMethod(UIFieldEditor, @selector(deleteBackward));
+	Method loadMethod = class_getClassMethod(self, _cmd);
+	if (deleteBackwardMethod && loadMethod && strcmp(method_getTypeEncoding(deleteBackwardMethod), method_getTypeEncoding(loadMethod)) == 0) {
+		UIFieldEditor_deleteBackward = (void (*)(id, SEL))method_getImplementation(deleteBackwardMethod);
+		method_setImplementation(deleteBackwardMethod, (IMP)deleteBackward);
 	}
 }
 
@@ -68,23 +79,6 @@ static void *BackwardDeleteTargetKey = &BackwardDeleteTargetKey;
 		objc_setAssociatedObject(fieldEditor, BackwardDeleteTargetKey, nil, OBJC_ASSOCIATION_ASSIGN);
 	}
 	return YES;
-}
-
-@end
-
-WEAK_IMPORT_ATTRIBUTE
-@interface UIFieldEditor : UIView
-@end
-
-@implementation UIFieldEditor (HSBackspaceFriendlyTextField)
-
-- (void)hs_deleteBackward {
-	
-	HSBackspaceFriendlyTextField *textField = objc_getAssociatedObject(self, BackwardDeleteTargetKey);
-	[textField my_willDeleteBackward];
-	
-	// Swizzled method, this actually calls the original IMP
-	[self hs_deleteBackward];
 }
 
 @end

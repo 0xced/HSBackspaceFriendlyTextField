@@ -10,4 +10,6 @@
 
 @interface HSBackspaceFriendlyTextField : UITextField
 
+- (void)my_willDeleteBackward;
+
 @end
